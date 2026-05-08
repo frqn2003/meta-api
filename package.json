@@ -1,16 +1,21 @@
 {
   "name": "metaads-api",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "API de ingesta Meta Ads hacia Data Warehouse",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "@fastify/cors": "^11.2.0",
-    "fastify": "^5.8.5"
+    "axios": "^1.16.0",
+    "dotenv": "^17.4.2",
+    "fastify": "^5.8.5",
+    "node-cron": "^4.2.1",
+    "pg": "^8.20.0"
   }
 }
