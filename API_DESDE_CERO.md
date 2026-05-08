@@ -1,6 +1,6 @@
-# Cómo crear la API desde cero
+# Cómo crear la API intermediaria desde cero
 
-Esta guía explica la base conceptual para construir una API de ingesta Meta Ads con Node.js, Fastify y PostgreSQL.
+Esta guía explica la base conceptual para construir una API intermediaria con Node.js y Fastify que consume Meta Ads, normaliza datos y entrega un JSON listo para que Sistemas lo cargue en el Data Warehouse.
 
 ## 1. Objetivo de la API
 
@@ -10,16 +10,25 @@ La API debe encargarse de:
 - Pedir métricas por campaña.
 - Normalizar los datos recibidos.
 - Resolver campos dinámicos como `Resultados`.
-- Insertar o actualizar la tabla existente en el Data Warehouse.
-- Ejecutar ingestas históricas y diarias.
+- Ejecutar consultas históricas y diarias.
 - Exponer endpoints para disparar o monitorear procesos.
+- Devolver un contrato de salida estable para Sistemas.
+
+La API no debe encargarse de:
+
+- Conectarse al Data Warehouse.
+- Insertar o actualizar datos.
+- Ejecutar `UPSERT`.
+- Crear tablas.
+- Definir claves únicas o constraints.
+- Resolver la idempotencia final de la carga.
 
 ## 2. Dependencias necesarias
 
-En este proyecto ya están instaladas:
+Para el alcance actual se necesitan:
 
 ```bash
-npm install fastify @fastify/cors pg axios dotenv node-cron
+npm install fastify @fastify/cors axios dotenv node-cron
 ```
 
 Para desarrollo local suele ser útil tener `nodemon`.
@@ -46,10 +55,32 @@ Aunque no es obligatorio crear toda la estructura de entrada, conceptualmente co
 | Servidor Fastify | Levanta la API y registra rutas. |
 | Configuración | Lee variables de entorno. |
 | Cliente Meta Ads | Consume endpoints de Meta con `axios`. |
-| Servicio de ingesta | Orquesta rangos, paginación, retries y normalización. |
-| Mapper | Convierte respuesta de Meta al esquema del Data Warehouse. |
-| Repositorio PostgreSQL | Ejecuta inserts/upserts con `pg`. |
-| Job diario | Ejecuta la ingesta automática con `node-cron`. |
+| Servicio de extracción | Orquesta rangos, paginación, retries y normalización. |
+| Mapper | Convierte respuesta de Meta al contrato de salida acordado. |
+| Contrato de salida | Define el JSON que consume Sistemas. |
+| Job diario | Ejecuta la extracción automática con `node-cron`. |
+
+## Arquitectura general
+
+```text
+Cliente interno / Sistemas / Cron
+        ↓
+Fastify API
+        ↓
+Routes
+        ↓
+Servicio de extracción
+        ↓
+Cliente Meta Ads
+        ↓
+Mapper / Normalizador
+        ↓
+Respuesta JSON
+        ↓
+Sistemas
+        ↓
+Data Warehouse
+```
 
 ## 4. Variables de entorno
 
@@ -59,7 +90,6 @@ Variables mínimas:
 
 ```env
 PORT=3000
-DATABASE_URL=postgres://usuario:password@host:5432/base
 META_ACCESS_TOKEN=token_de_meta
 META_AD_ACCOUNT_ID=act_XXXXXXXXXXXX
 META_API_VERSION=v21.0
@@ -75,6 +105,8 @@ META_DAILY_CRON=0 6 * * *
 META_REQUEST_LIMIT=500
 ```
 
+No se requiere `DATABASE_URL` para esta arquitectura.
+
 ## 5. Endpoints iniciales recomendados
 
 ### `GET /health`
@@ -89,9 +121,48 @@ Respuesta esperada:
 }
 ```
 
-### `POST /ingest/meta/historical`
+### `POST /meta-ads/report`
 
-Ejecuta una ingesta histórica.
+Devuelve datos normalizados para un rango de fechas.
+
+Body sugerido:
+
+```json
+{
+  "from": "2024-01-01",
+  "to": "2024-01-31",
+  "campaignIds": ["123", "456"]
+}
+```
+
+Respuesta sugerida:
+
+```json
+{
+  "status": "success",
+  "source": "meta_ads",
+  "from": "2024-01-01",
+  "to": "2024-01-31",
+  "rowsCount": 1,
+  "rows": [
+    {
+      "Inicio_del_informe": "2024-01-01",
+      "Fin_del_informe": "2024-01-01",
+      "Nombre_de_la_campaña": "Campaña ejemplo",
+      "Resultados": 10,
+      "Indicador_de_resultado": "leads",
+      "Alcance": 1000,
+      "Impresiones": 2500,
+      "Clics": 120,
+      "Importe_gastado_ARS": 35000.5
+    }
+  ]
+}
+```
+
+### `POST /meta-ads/historical`
+
+Ejecuta una extracción histórica.
 
 Body sugerido:
 
@@ -105,23 +176,24 @@ Body sugerido:
 
 Si `campaignIds` no se envía, puede traer todas las campañas de la cuenta.
 
-### `POST /ingest/meta/daily`
+### `POST /meta-ads/daily`
 
-Ejecuta manualmente la ingesta diaria.
+Ejecuta manualmente la extracción diaria.
 
 Body sugerido:
 
 ```json
 {
-  "date": "2026-05-08"
+  "date": "2026-05-08",
+  "lookbackDays": 7
 }
 ```
 
 Si `date` no se envía, debería tomar ayer o el día actual según la regla de negocio.
 
-### `GET /ingest/meta/status`
+### `GET /meta-ads/status`
 
-Consulta el estado de la última ingesta si se registra en una tabla de control.
+Consulta estado interno de última ejecución si la API mantiene información en memoria o logs.
 
 ## 6. Consumo de Meta Ads
 
@@ -176,7 +248,7 @@ Ejemplo de prioridad inicial:
 
 El `Indicador_de_resultado` debería guardar el `action_type` elegido o una etiqueta normalizada.
 
-## 8. Ingesta histórica
+## 8. Extracción histórica
 
 Para dos años de histórico no conviene pedir todo en una sola consulta.
 
@@ -185,8 +257,8 @@ Recomendación:
 - Dividir el rango en meses.
 - Consultar Meta por cada mes.
 - Procesar paginación completa.
-- Hacer upsert por lote.
-- Registrar inicio, fin, cantidad de filas, errores y duración.
+- Devolver lotes o respuesta resumida para Sistemas.
+- Registrar inicio, fin, cantidad de filas, errores y duración en logs.
 
 Ejemplo de ventanas:
 
@@ -196,37 +268,40 @@ Ejemplo de ventanas:
 2024-03-01 → 2024-03-31
 ```
 
-## 9. Ingesta diaria
+## 9. Extracción diaria
 
-La ingesta diaria puede ejecutarse con `node-cron`.
+La extracción diaria puede ejecutarse con `node-cron` o manualmente por endpoint.
 
 Recomendación:
 
 - Ejecutarla temprano por la mañana.
-- Ingestar el día anterior.
+- Consultar el día anterior.
 - Opcionalmente reprocesar los últimos 3 a 7 días porque Meta puede recalcular métricas.
-- Usar `UPSERT`, no `INSERT` simple.
+- Entregar siempre el mismo contrato de salida para que Sistemas decida cómo procesar los datos en el Data Warehouse.
 
 Ejemplo de estrategia:
 
 ```text
 Todos los días 06:00:
-  ingestar desde hoy - 7 días hasta ayer
+  consultar desde hoy - 7 días hasta ayer
 ```
 
 Esto reduce problemas por atribución tardía.
 
-## 10. PostgreSQL
+## 10. Contrato con Sistemas
 
-La API debería usar un pool de conexiones con `pg`.
+El punto más importante de esta arquitectura es acordar el contrato entre la API y Sistemas.
 
-Aspectos importantes:
+Debe definirse:
 
-- Usar queries parametrizadas.
-- No concatenar valores del usuario en SQL.
-- Manejar transacciones para lotes grandes.
-- Usar `ON CONFLICT DO UPDATE` si existe una clave única.
-- Registrar errores sin exponer tokens.
+- **Endpoint que Sistemas va a consumir.**
+- **Formato del request.**
+- **Formato exacto del response.**
+- **Nombres de campos.**
+- **Tipos esperados.**
+- **Comportamiento ante errores.**
+- **Tamaño máximo de respuesta o paginación interna.**
+- **Si Sistemas prefiere recibir todo junto, por ventanas o por páginas.**
 
 ## 11. Primeros pasos recomendados
 
@@ -234,35 +309,34 @@ Orden sugerido de implementación:
 
 1. Crear configuración con variables de entorno.
 2. Levantar Fastify con `/health`.
-3. Crear conexión a PostgreSQL.
-4. Probar consulta simple al Data Warehouse.
-5. Crear cliente de Meta Ads con `axios`.
-6. Probar endpoint de Insights para un rango corto.
-7. Crear mapper del response al esquema de tabla.
-8. Implementar upsert.
-9. Crear endpoint manual de ingesta diaria.
-10. Crear endpoint manual de ingesta histórica.
-11. Agregar `node-cron` para automatizar la diaria.
-12. Agregar logging y tabla de control si es posible.
+3. Crear cliente de Meta Ads con `axios`.
+4. Probar endpoint de Insights para un rango corto.
+5. Crear mapper del response al contrato de salida.
+6. Crear endpoint `/meta-ads/report`.
+7. Implementar paginación de Meta.
+8. Crear endpoint manual de extracción diaria.
+9. Crear endpoint manual de extracción histórica.
+10. Agregar `node-cron` si la API debe automatizar la consulta diaria.
+11. Documentar contrato final para Sistemas.
 
 ## 12. Riesgos principales
 
 - **Token vencido o sin permisos:** validar permisos `ads_read` y acceso a la cuenta publicitaria.
-- **Rate limits:** dividir ingesta y aplicar reintentos con espera.
+- **Rate limits:** dividir extracción y aplicar reintentos con espera.
 - **Campos no disponibles:** algunas columnas exportadas por Ads Manager no existen igual en la API.
 - **Resultados variables:** las campañas pueden optimizar a objetivos distintos.
-- **Duplicados:** evitar inserts sin clave única.
+- **Respuesta muy grande:** el histórico de dos años puede requerir paginación o ventanas.
 - **Cambios de nombre:** no depender solo de `Nombre_de_la_campaña`.
-- **Atribución tardía:** reprocesar últimos días en la ingesta diaria.
+- **Atribución tardía:** reprocesar últimos días en la consulta diaria.
 
 ## 13. Decisiones pendientes
 
 Antes de cerrar código productivo conviene confirmar:
 
-- Nombre exacto de la tabla destino.
-- Si se puede agregar `campaign_id`.
-- Si se puede agregar tabla de control de ingestas.
+- Endpoint final que va a consumir Sistemas.
+- Si Sistemas quiere respuesta completa, por páginas o por ventanas.
+- Si se debe incluir `campaign_id` aunque no esté en la tabla original.
 - Zona horaria esperada.
 - Regla exacta para `Resultados`.
 - Qué hacer cuando una campaña tiene varios conjuntos de anuncios.
-- Si los datos se guardan día por día o por rango.
+- Si los datos se entregan día por día o por rango.

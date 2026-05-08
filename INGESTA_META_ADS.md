@@ -1,19 +1,21 @@
-# Ingesta Meta Ads
+# Extracción Meta Ads
 
-Este documento describe cómo debería funcionar la ingesta automática desde Meta Ads hacia PostgreSQL/Data Warehouse.
+Este documento describe cómo debería funcionar la extracción automática desde Meta Ads hacia la API intermediaria.
 
-## Tipos de ingesta
+La API no carga directamente datos en PostgreSQL/Data Warehouse. Su responsabilidad es obtener datos desde Meta Ads, normalizarlos y entregarlos a Sistemas mediante un contrato JSON estable.
 
-La API debe soportar dos tipos de carga:
+## Tipos de extracción
 
-- **Histórica:** carga inicial de aproximadamente dos años.
-- **Diaria:** carga automática recurrente para mantener los datos al día.
+La API debe soportar dos tipos de consulta:
 
-## Ingesta histórica
+- **Histórica:** obtención inicial de aproximadamente dos años.
+- **Diaria:** obtención recurrente de datos recientes para que Sistemas mantenga actualizado el Data Warehouse.
+
+## Extracción histórica
 
 ### Objetivo
 
-Traer la información pasada de campañas de Meta Ads y poblar la tabla existente.
+Traer la información pasada de campañas de Meta Ads y devolverla normalizada para que Sistemas realice la carga final.
 
 ### Rango inicial
 
@@ -44,17 +46,17 @@ Flujo:
 3. Por cada ventana:
    1. Consultar Insights en Meta.
    2. Recorrer paginación completa.
-   3. Mapear filas al esquema destino.
-   4. Ejecutar upsert en PostgreSQL.
-   5. Registrar resultado de la ventana.
-4. Devolver resumen final.
+   3. Mapear filas al contrato de salida.
+   4. Acumular filas normalizadas.
+   5. Registrar resultado de la ventana en logs o respuesta.
+4. Devolver JSON final o lotes por ventana para Sistemas.
 ```
 
-## Ingesta diaria
+## Extracción diaria
 
 ### Objetivo
 
-Mantener actualizados los datos sin intervención manual.
+Devolver datos actualizados para que Sistemas mantenga el Data Warehouse al día.
 
 ### Estrategia recomendada
 
@@ -63,21 +65,21 @@ Aunque parezca suficiente cargar solo ayer, Meta puede actualizar métricas por 
 Por eso se recomienda:
 
 ```text
-cada día → reprocesar últimos 3 a 7 días
+cada día → consultar últimos 3 a 7 días
 ```
 
 Ejemplo:
 
 ```text
 Fecha actual: 2026-05-08
-Rango a ingestar: 2026-05-01 → 2026-05-07
+Rango a consultar: 2026-05-01 → 2026-05-07
 ```
 
-Esto exige que la carga sea idempotente.
+Sistemas decide cómo insertar, actualizar o deduplicar esos datos en el Data Warehouse.
 
 ## Automatización con cron
 
-Con `node-cron`, la API puede programar una tarea diaria.
+Con `node-cron`, la API puede programar una consulta diaria.
 
 Ejemplo de horario recomendado:
 
@@ -90,6 +92,8 @@ Variable sugerida:
 ```env
 META_DAILY_CRON=0 6 * * *
 ```
+
+Si Sistemas prefiere orquestar la ejecución desde afuera, el cron interno puede omitirse y dejar solo endpoints manuales.
 
 ## Endpoint de Meta recomendado
 
@@ -112,7 +116,7 @@ access_token={META_ACCESS_TOKEN}
 
 ## Datos que pueden requerir llamadas adicionales
 
-Algunos campos de la tabla no siempre salen directamente desde Insights.
+Algunos campos del contrato no siempre salen directamente desde Insights.
 
 ### Estado o entrega de campaña
 
@@ -133,7 +137,7 @@ GET /{campaign_id}/adsets?fields=id,name,daily_budget,lifetime_budget,status,eff
 Decisión necesaria:
 
 - Si hay varios conjuntos de anuncios por campaña, definir cómo agregarlos.
-- Si se debe guardar el presupuesto total, diario o ambos.
+- Si se debe devolver el presupuesto total, diario o ambos.
 
 ## Paginación
 
@@ -148,7 +152,7 @@ Meta puede devolver:
 }
 ```
 
-La ingesta debe seguir `paging.next` hasta que no exista más.
+La API debe seguir `paging.next` hasta que no exista más.
 
 ## Rate limits y reintentos
 
@@ -156,8 +160,8 @@ La API debe estar preparada para:
 
 - Reintentar errores temporales.
 - Esperar entre reintentos.
-- Cortar la ingesta si el error es de permisos o token inválido.
-- Registrar qué ventana falló para poder reanudar.
+- Cortar la extracción si el error es de permisos o token inválido.
+- Registrar qué ventana falló para poder reintentar.
 
 Errores típicos:
 
@@ -170,13 +174,9 @@ Errores típicos:
 
 ## Idempotencia
 
-La ingesta debe poder ejecutarse varias veces para el mismo rango sin duplicar filas.
+La idempotencia final de la carga corresponde a Sistemas/Data Warehouse.
 
-Para eso:
-
-- Usar `UPSERT`.
-- Definir clave única.
-- Reprocesar últimos días en la carga diaria.
+La API debe ayudar devolviendo campos estables que permitan deduplicar:
 
 Clave ideal:
 
@@ -184,7 +184,7 @@ Clave ideal:
 meta_account_id + campaign_id + date_start + date_stop + indicador_resultado
 ```
 
-Si la tabla no tiene esos campos, se recomienda una tabla auxiliar o una clave alternativa menos robusta.
+Aunque la tabla final no use todos esos campos, es recomendable incluirlos en el contrato de salida para facilitar la carga del lado de Sistemas.
 
 ## Normalización de datos
 
@@ -199,7 +199,7 @@ La API debe convertir:
 - `ctr` → número decimal.
 - `cpc` → número decimal.
 - `cpm` → número decimal.
-- `frequency` → número decimal o entero según decisión de tabla.
+- `frequency` → número decimal o entero según decisión de negocio.
 
 ## Manejo de Resultados
 
@@ -218,8 +218,8 @@ Se recomienda definir una lista de prioridad inicial:
 
 Si no aparece ningún `action_type` conocido:
 
-- Guardar `Resultados = 0`.
-- Guardar `Indicador_de_resultado = objetivo_desconocido` o el primer action type disponible.
+- Devolver `Resultados = 0`.
+- Devolver `Indicador_de_resultado = objetivo_desconocido` o el primer action type disponible.
 - Registrar el caso para revisar la regla.
 
 ## Validaciones previas a producción
@@ -231,22 +231,26 @@ Antes de automatizar:
 - Validar moneda ARS.
 - Validar zona horaria.
 - Validar que `Resultados` coincida con lo que ve negocio.
-- Validar duplicados.
-- Validar que la ingesta diaria actualice datos ya existentes.
+- Validar que el JSON respete el contrato acordado con Sistemas.
+- Validar que la respuesta sea consumible para rangos grandes.
 
 ## Monitoreo recomendado
 
-Si se puede crear una tabla auxiliar, registrar:
+Como la API no escribe en base, el monitoreo inicial puede resolverse con logs y respuestas de resumen.
+
+Resumen sugerido:
 
 | Campo | Descripción |
 |---|---|
 | `job_name` | Nombre del proceso. |
+| `source` | Fuente, por ejemplo `meta_ads`. |
 | `from_date` | Inicio del rango. |
 | `to_date` | Fin del rango. |
-| `status` | `running`, `success`, `failed`. |
+| `status` | `success`, `partial_success`, `failed`. |
 | `rows_read` | Filas leídas desde Meta. |
-| `rows_written` | Filas insertadas/actualizadas. |
-| `error_message` | Error si falló. |
+| `rows_returned` | Filas devueltas a Sistemas. |
+| `windows_processed` | Ventanas procesadas. |
+| `errors` | Errores por ventana si existieron. |
 | `started_at` | Fecha/hora de inicio. |
 | `finished_at` | Fecha/hora de fin. |
 
@@ -254,11 +258,11 @@ Si se puede crear una tabla auxiliar, registrar:
 
 1. Probar token y cuenta publicitaria contra Meta.
 2. Consumir Insights para un día y una campaña.
-3. Mapear la respuesta al esquema.
-4. Insertar una fila de prueba en PostgreSQL.
-5. Convertir insert en upsert.
-6. Implementar paginación.
-7. Implementar histórico por ventanas.
-8. Implementar ingesta diaria manual.
-9. Automatizar con cron.
-10. Agregar registro de ejecuciones.
+3. Mapear la respuesta al contrato de salida.
+4. Devolver JSON normalizado desde un endpoint.
+5. Implementar paginación.
+6. Implementar histórico por ventanas.
+7. Implementar extracción diaria manual.
+8. Definir con Sistemas si necesitan paginación, lotes o respuesta completa.
+9. Automatizar con cron si corresponde.
+10. Documentar contrato final de consumo.
