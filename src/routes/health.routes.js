@@ -16,3 +16,14 @@
 //   - Llamadas a Meta Ads.
 //   - Acceso a variables de entorno sensibles en la respuesta.
 // ─────────────────────────────────────────────────────────────────────────────
+
+
+export default async function Health(fastify){
+    fastify.get('/health', async () => {
+        return {
+            status: 'ok',
+            service: 'metaads-api',
+            timestamp: new Date().toISOString()
+        }
+    })
+}

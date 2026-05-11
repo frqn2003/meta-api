@@ -31,3 +31,27 @@
 //   - Llamadas a Meta Ads.
 //   - Importar otros módulos del proyecto.
 // ─────────────────────────────────────────────────────────────────────────────
+
+function readEnv() {
+    const config = {
+        PORT: process.env.PORT || 3000,
+        META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN,
+        META_AD_ACCOUNT_ID: process.env.META_AD_ACCOUNT_ID,
+        META_API_VERSION: process.env.META_API_VERSION,
+        META_INGEST_TIMEZONE: process.env.META_INGEST_TIMEZONE || 'America/Argentina/Buenos_Aires',
+        META_DAILY_CRON: process.env.META_DAILY_CRON || '0 6 * * *',
+        META_REQUEST_LIMIT: process.env.META_REQUEST_LIMIT || 500
+    }
+    
+    // Validar variables obligatorias
+    const required = ['META_ACCESS_TOKEN', 'META_AD_ACCOUNT_ID', 'META_API_VERSION']
+    const missing = required.filter(key => !config[key])
+    
+    if (missing.length > 0) {
+        throw new Error(`Faltan variables de entorno obligatorias: ${missing.join(', ')}`)
+    }
+    
+    return config
+}
+
+export default readEnv()
