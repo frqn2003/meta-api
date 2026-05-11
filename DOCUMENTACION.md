@@ -14,6 +14,7 @@ El campo resultados cambia segun el objetivo de la campaña, puede tener valores
 - Clientes potenciales
 - Conversiones
 - Interacciones
+- **Consultar con Rocio todas las posibles opciones para Indicador_de_resultado**
 
 La tabla tiene dos dos campos para ellos, **Resultados** y **Indicador_de_resultado**. Por ejemplo podemos tener los siguientes casos:
 
