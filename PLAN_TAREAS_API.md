@@ -60,10 +60,10 @@ Alinear qué datos se van a traer, cómo se van a entregar a Sistemas y qué reg
 
 ### Tareas Persona B
 
-- **Relevar esquema esperado:** documentar columnas y tipos que Sistemas espera recibir.
-- **Validar campos requeridos:** comparar el esquema pedido contra el contrato de salida.
-- **Documentar preguntas abiertas:** registrar dudas sobre moneda, zona horaria, resultados y presupuestos.
-- **Preparar ejemplos de campañas:** identificar campañas reales para pruebas.
+- **Relevar esquema esperado:** documentar columnas y tipos que Sistemas espera recibir. **Hecho**
+- **Validar campos requeridos:** comparar el esquema pedido contra el contrato de salida. **Hecho, dependemos de que sistemas nos confirme que van a usar los mismos campos**
+- **Documentar preguntas abiertas:** registrar dudas sobre moneda, zona horaria, resultados y presupuestos. **Hecho**
+- **Preparar ejemplos de campañas:** identificar campañas reales para pruebas. **CONSULTAR CON ROCIO ID's DE CAMPAÑAS DE EJEMPLO**
 - **Crear checklist funcional:** armar una lista para validar resultados contra Meta Ads Manager.
 
 ### Entregables
@@ -297,15 +297,15 @@ Dejar la API lista para uso estable.
 
 ## Distribución resumida por dificultad
 
-| Área | Persona A - dificultad alta | Persona B - dificultad menor |
-|---|---|---|
-| Arquitectura | Diseño de capas y flujo | Documentar decisiones |
-| Meta Ads | Cliente, paginación, errores, retries | Pruebas simples y comparación manual |
-| Datos | Contrato de salida, paginación y metadatos técnicos | Validación de JSON y conteos |
-| Mapper | Resultados dinámicos y costos | Campos directos y casos simples |
-| Histórico | Ventanas, reanudación y rate limits | Monitoreo y reporte de ejecución |
-| Diario | Cron, reproceso y resiliencia | Checklist y validación manual |
-| Producción | Seguridad, performance y despliegue | Documentación y guía de uso |
+| Área         | Persona A - dificultad alta                         | Persona B - dificultad menor         |
+| ------------ | --------------------------------------------------- | ------------------------------------ |
+| Arquitectura | Diseño de capas y flujo                             | Documentar decisiones                |
+| Meta Ads     | Cliente, paginación, errores, retries               | Pruebas simples y comparación manual |
+| Datos        | Contrato de salida, paginación y metadatos técnicos | Validación de JSON y conteos         |
+| Mapper       | Resultados dinámicos y costos                       | Campos directos y casos simples      |
+| Histórico    | Ventanas, reanudación y rate limits                 | Monitoreo y reporte de ejecución     |
+| Diario       | Cron, reproceso y resiliencia                       | Checklist y validación manual        |
+| Producción   | Seguridad, performance y despliegue                 | Documentación y guía de uso          |
 
 ## Orden recomendado de trabajo
 
