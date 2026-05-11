@@ -8,7 +8,7 @@ const fastify = Fastify({ logger: true })
 
 await fastify.register(cors, { origin: true })
 await fastify.register(healthRoutes)
-await fastify.register(metaAdsRoutes, { prefix: '/insights' })
+await fastify.register(metaAdsRoutes, { prefix: '/reporte' })
 
 const start = async () => {
   try {
@@ -19,7 +19,7 @@ const start = async () => {
       host: '0.0.0.0'
     })
 
-    fastify.log.info(`Server running on port ${port}`)
+    fastify.log.info(`Servidor corriendo en el puerto ${port}`)
   } catch (err) {
     fastify.log.error(err)
     process.exit(1)
