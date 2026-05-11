@@ -61,29 +61,29 @@ Todos los valores traidos de la api de meta estaran en la zona horaria de argent
 
 La tabla existe del lado de Sistemas/Data Warehouse. La API debe entregar campos compatibles con ese esquema.
 
-| Campo                                          |   Tipo esperado | Descripción                                                                                                                                      |
-| ---------------------------------------------- | --------------: | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Inicio_del_informe`                           |     `TIMESTAMP` | Fecha/hora inicial del período informado.                                                                                                        |
-| `Fin_del_informe`                              |     `TIMESTAMP` | Fecha/hora final del período informado.                                                                                                          |
-| `Nombre_de_la_campaña`                         | `nvarchar(100)` | Nombre de la campaña.                                                                                                                            |
-| `Entrega_de_la_campaña`                        | `nvarchar(100)` | Estado o entrega de la campaña.                                                                                                                  |
-| `Presupuesto_del_conjunto_de_anuncios`         |        `bigint` | Presupuesto configurado a nivel conjunto de anuncios.                                                                                            |
-| `Tipo_de_presupuesto_del_conjunto_de_anuncios` | `nvarchar(100)` | Tipo de presupuesto, por ejemplo diario o total.                                                                                                 |
-| `Configuración_de_atribución`                  | `nvarchar(100)` | Ventana/configuración de atribución.                                                                                                             |
-| `Resultados`                                   |        `bigint` | Cantidad de resultados según objetivo de campaña.                                                                                                |
-| `Indicador_de_resultado`                       | `nvarchar(100)` | Tipo de resultado: leads, formularios enviados, tráfico, clientes potenciales u otros.                                                           |
-| `Alcance`                                      |        `bigint` | Personas alcanzadas.                                                                                                                             |
-| `Impresiones`                                  |        `bigint` | Cantidad de impresiones.                                                                                                                         |
-| `Clics`                                        |           `int` | Cantidad de clics.                                                                                                                               |
-| `Interacion_con_la_pagina`                     |           `int` | Interacciones con la página.                                                                                                                     |
-| `Frecuencia`                                   |           `int` | Frecuencia. Meta suele devolver este valor como decimal, por lo que se recomienda validar si Sistemas lo espera entero o decimal.                |
-| `CTR_Todos`                                    |         `float` | CTR de todos los clics.                                                                                                                          |
-| `Coste_por_resultado`                          |         `float` | Costo por resultado.                                                                                                                             |
-| `Importe_gastado_ARS`                          |         `float` | Importe gastado en pesos argentinos.                                                                                                             |
-| `Inicio`                                       |     `TIMESTAMP` | Inicio de campaña o período operativo.                                                                                                           |
-| `Fin`                                          |     `TIMESTAMP` | Fin de campaña o período operativo.                                                                                                              |
-| `CPC_todos`                                    |         `float` | Costo por clic.                                                                                                                                  |
-| `CPM`                                          |           `int` | Costo por mil impresiones. Meta suele devolver este valor como decimal, por lo que se recomienda validar si Sistemas lo espera entero o decimal. |
+| Campo                                          |      Tipo esperado | Descripción                                                                                                                                      |
+| ---------------------------------------------- | -----------------: | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Inicio_del_informe`                           |        `TIMESTAMP` | Fecha/hora inicial del período informado.                                                                                                        |
+| `Fin_del_informe`                              |        `TIMESTAMP` | Fecha/hora final del período informado.                                                                                                          |
+| `Nombre_de_la_campaña`                         |     `varchar(100)` | Nombre de la campaña.                                                                                                                            |
+| `Entrega_de_la_campaña`                        |     `varchar(100)` | Estado o entrega de la campaña.                                                                                                                  |
+| `Presupuesto_del_conjunto_de_anuncios`         |           `bigint` | Presupuesto configurado a nivel conjunto de anuncios.                                                                                            |
+| `Tipo_de_presupuesto_del_conjunto_de_anuncios` |     `varchar(100)` | Tipo de presupuesto, por ejemplo diario o total.                                                                                                 |
+| `Configuración_de_atribución`                  |     `varchar(100)` | Ventana/configuración de atribución.                                                                                                             |
+| `Resultados`                                   |           `bigint` | Cantidad de resultados según objetivo de campaña.                                                                                                |
+| `Indicador_de_resultado`                       |     `varchar(100)` | Tipo de resultado: leads, formularios enviados, tráfico, clientes potenciales u otros.                                                           |
+| `Alcance`                                      |           `bigint` | Personas alcanzadas.                                                                                                                             |
+| `Impresiones`                                  |           `bigint` | Cantidad de impresiones.                                                                                                                         |
+| `Clics`                                        |          `integer` | Cantidad de clics.                                                                                                                               |
+| `Interacion_con_la_pagina`                     |          `integer` | Interacciones con la página.                                                                                                                     |
+| `Frecuencia`                                   |   `numeric (10,2)` | Frecuencia. Meta suele devolver este valor como decimal, por lo que se recomienda validar si Sistemas lo espera entero o decimal.                |
+| `CTR_Todos`                                    | `double precision` | CTR de todos los clics.                                                                                                                          |
+| `Coste_por_resultado`                          |   `numeric (12,2)` | Costo por resultado.                                                                                                                             |
+| `Importe_gastado_ARS`                          |   `numeric (12,2)` | Importe gastado en pesos argentinos.                                                                                                             |
+| `Inicio`                                       |        `TIMESTAMP` | Inicio de campaña o período operativo.                                                                                                           |
+| `Fin`                                          |        `TIMESTAMP` | Fin de campaña o período operativo.                                                                                                              |
+| `CPC_todos`                                    |   `numeric (12,2)` | Costo por clic.                                                                                                                                  |
+| `CPM`                                          |   `numeric (12,2)` | Costo por mil impresiones. Meta suele devolver este valor como decimal, por lo que se recomienda validar si Sistemas lo espera entero o decimal. |
 
 ### Ejemplo de contrato de salida
 
