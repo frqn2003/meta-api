@@ -1,34 +1,35 @@
 export default async function metaAdsRoutes(fastify) {
 
-    // GET /reporte?desde=YYYY-MM-DD&hasta=YYYY-MM-DD&campaignId=id1,id2
+    // GET /reporte?desde=YYYY-MM-DD&hasta=YYYY-MM-DD&campaignIds=id1,id2
     // Lectura de dahastas normalizados para un rango puntual.
     // Es GET porque no crea ni modifica nada — solo consulta y devuelve.
     fastify.get('/', async (request, reply) => {
-        const { desde, hasta, campaignId } = request.query
+        const { desde, hasta, campaignIds } = request.query
 
         if (!desde || !hasta) {
             return reply.code(400).send({ status: 'error', message: 'desde y hasta son requeridos' })
         }
 
-        const ids = campaignId ? campaignId.split(',') : []
+        const ids = campaignIds ? campaignIds.split(',') : []
 
         // TODO: return await extraerReport(desde, hasta, ids)
-        return { status: 'success', source: 'meta_ads', desde, hasta, campaignId: ids, rowsCount: 0, rows: [] }
+        return { status: 'success', source: 'meta_ads', desde, hasta, campaignIds: ids, rowsCount: 0, rows: [] }
     })
 
     // POST /reporte/extraer/historico
     // Dispara la extracción de un rango amplio dividido en ventanas mensuales.
-    // Es POST porque lanza un proceso con efechastas (puede ser coshastaso y no idempotente).
-    // Body: { desde: 'YYYY-MM-DD', hasta: 'YYYY-MM-DD', campaignId?: string[] }
+    // Es POST porque lanza un proceso con efechastas (puede ser costoso y no idempotente).
+    // Body: { desde: 'YYYY-MM-DD', hasta: 'YYYY-MM-DD', campaignIds?: string[] }
     fastify.post('/extraer/historico', async (request, reply) => {
-        const { desde, hasta, campaignId } = request.body ?? {}
+        const { desde, hasta, campaignIds } = request.body ?? {}
 
         if (!desde || !hasta) {
             return reply.code(400).send({ status: 'error', message: 'desde y hasta son requeridos' })
         }
 
-        // TODO: return await extraer/historico(desde, hasta, campaignId ?? [])
-        return { status: 'success', source: 'meta_ads', type: 'historico', desde, hasta, campaignId: campaignId ?? [], rowsCount: 0, rows: [] }
+        // TODO: return await extraer/historico(desde, hasta, campaignIds ?? []) 
+        
+        return { status: 'success', source: 'meta_ads', type: 'historico', desde, hasta, campaignIds: campaignIds ?? [], rowsCount: 0, rows: [] }
     })
 
     // POST /reporte/extraer/diario
